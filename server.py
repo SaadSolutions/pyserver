@@ -1,12 +1,22 @@
-from flask import Flask, request, send_from_directory
-from werkzeug import secure_filename
+from flask import Flask, request, send_from_directory, jsonify
+from werkzeug.utils import secure_filename
 import os
 import time 
+from logger import ServerLogger
 
 app = Flask(__name__)
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "upload")
 RELEASES      = os.path.join(BASE_DIR, "releases")
+
+# Ensure directories exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(RELEASES, exist_ok=True)
+
+# Initialize the logger (creates server_activity.txt automatically)
+server_logger = ServerLogger("server_activity.txt")
+app.after_request(server_logger.log_response)
+
 @app.route("/upload", methods=["POST"])
 def upload_file():
     if "file" not in request.files:
@@ -40,6 +50,16 @@ def manifest():
 @app.route("/download/<path:filename>")
 def download(filename):
     return send_from_directory(RELEASES, filename, as_attachment=True)
+
+@app.post("/logs")
+def receive_logs():
+    data = request.get_json(force=True, silent=True) or {}
+    host = data.get("host", "?")
+    logs = data.get("logs", [])
+    with open(f"logs_{host}.txt", "a", encoding="utf-8") as f:
+        for line in logs:
+            f.write(line + "\n")
+    return jsonify(ok=True, received=len(logs))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

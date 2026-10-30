@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -23,6 +24,9 @@ import tempfile
 import urllib.request
 from dataclasses import dataclass
 from typing import Callable, Optional
+
+
+log = logging.getLogger("updater")
 
 
 class UpdateError(Exception):
@@ -51,16 +55,7 @@ def is_frozen() -> bool:
 
 
 class Updater:
-    """
-    Usage:
-        updater = Updater(current_version="1.1.0",
-                          manifest_url="https://example.com/myapp/latest.json")
-        updater.run()   # check, download, swap, relaunch (no-op when not frozen)
-
-    Manifest format (JSON):
-        {"version": "1.2.0", "url": "https://.../myapp.exe",
-         "sha256": "<hex>", "notes": "optional release notes"}
-    """
+    """..."""
 
     def __init__(
         self,
@@ -151,6 +146,9 @@ class Updater:
 
     def restart(self) -> None:
         """Launch the (new) exe as a fresh process and exit this one."""
+        # Flush the log queue to the server BEFORE we kill this process,
+        # otherwise the last few seconds of log records are lost.
+        logging.shutdown()
         env = os.environ.copy()
         env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
         subprocess.Popen([self.exe_path, *sys.argv[1:]], env=env, close_fds=True)
@@ -185,7 +183,7 @@ class Updater:
         except UpdateError as e:
             if raise_errors:
                 raise
-            print(f"[updater] {e}", file=sys.stderr)
+            log.error("[updater] %s", e)
             return False
         if restart:
             self.restart()
@@ -223,4 +221,4 @@ if __name__ == "__main__":
         with open(a.output, "w") as f:
             f.write(text + "\n")
     else:
-        print(text)
+        print(text)   # intentional: this is CLI output, not runtime logging

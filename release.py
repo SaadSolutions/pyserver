@@ -16,7 +16,7 @@ from pathlib import Path
 
 # ---- settings: change these once for your project ----
 APP_NAME = "main"                                  # build filename, without .exe
-BASE_URL = "http://127.0.0.1:5000/download"        # must match server.py's route
+BASE_URL = "http://192.168.122.1:5000/download"        # must match server.py's route
 RELEASES = Path(__file__).parent / "releases"      # releases/ next to this script
 # -------------------------------------------------------
 
